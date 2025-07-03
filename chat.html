@@ -31,7 +31,7 @@
     const config = {
       iceServers: [
         {
-          urls: "turn:192.168.66.9:3478",
+          urls: "turn:" + location.hostname + ":3478",
           username: "webrtcuser",
           credential: "123456"
         }

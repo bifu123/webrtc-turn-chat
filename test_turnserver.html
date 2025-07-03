@@ -23,7 +23,7 @@
     const pc = new RTCPeerConnection({
       iceServers: [
         {
-          urls: "turn:192.168.66.9:3478",  // 修改为你的 TURN 服务器 IP
+          urls: "turn:" + location.hostname + ":3478",  // 修改为你的 TURN 服务器 IP
           username: "webrtcuser",          // 与 turnserver.conf 中保持一致
           credential: "123456"             // 与 turnserver.conf 中保持一致
         }
