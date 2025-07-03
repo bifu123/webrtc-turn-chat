@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# 自动比较本地与远程仓库的代码，如果有更新，则自动拉取，并停掉当前容器，重新用最新代码来构建。
+
 # 项目路径，包含 git 仓库和 docker-compose.yml
 PROJECT_DIR="/home/test/webrtc-turn-chat"
 

@@ -1,27 +1,33 @@
-version: "3"
+version: "3"  # Compose 文件版本，"3" 是较通用版本，支持大部分 Docker Compose 功能。
 
-services:
-  coturn:
-    image: instrumentisto/coturn
-    container_name: coturn
-    restart: always
+services:  # 定义多个服务（容器）的集合
+
+  coturn:  # 第一个服务，coturn TURN 服务器
+    image: instrumentisto/coturn  # 使用 Docker Hub 上的官方镜像 instrumentisto/coturn
+    container_name: coturn  # 容器名称，方便用 docker 命令管理
+    restart: always  # 容器异常退出自动重启，保证服务持续可用
     ports:
-      - "3478:3478"
-      - "3478:3478/udp"
+      - "3478:3478"      # 映射宿主机 TCP 3478 端口到容器的 3478 端口（TURN TCP）
+      - "3478:3478/udp"  # 映射宿主机 UDP 3478 端口到容器的 3478 端口（TURN UDP）
     volumes:
       - ./turnserver/turnserver.conf:/etc/coturn/turnserver.conf
-    command: ["-c", "/etc/coturn/turnserver.conf"]
+      # 挂载宿主机当前目录下 turnserver 文件夹里的 turnserver.conf
+      # 到容器内的 /etc/coturn/turnserver.conf 位置，用来配置 coturn
+    command: ["-c", "/etc/coturn/turnserver.conf"]  
+    # 启动容器时执行的命令，告诉 coturn 使用指定配置文件启动
 
-  signaling:
-    build: .
-    container_name: signaling
+  signaling:  # 第二个服务，信令服务器，负责 WebRTC 信令交换
+    build: .  # 使用当前目录的 Dockerfile 构建镜像（一般包含 signaling_server.py 等代码）
+    container_name: signaling  # 容器名
     ports:
-      - "8765:8765"
+      - "8765:8765"  # 映射宿主机 8765 端口到容器 8765 端口，暴露信令服务端口
 
-  static:
-    image: nginx:alpine
-    container_name: webui
+  static:  # 第三个服务，静态文件服务器，用 nginx 提供 chat.html 等前端页面
+    image: nginx:alpine  # 轻量级 nginx 官方镜像
+    container_name: webui  # 容器名
     volumes:
-      - .:/usr/share/nginx/html:ro
+      - .:/usr/share/nginx/html:ro  
+      # 将宿主机当前目录（项目根目录）挂载到容器内的 nginx 默认网站根目录 /usr/share/nginx/html
+      # ":ro" 表示只读权限，防止容器内部修改宿主机文件
     ports:
-      - "8000:80"
+      - "8000:80"  # 将宿主机 8000 端口映射到容器内 nginx 监听的 80 端口，方便外部访问网页

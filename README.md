@@ -1,8 +1,8 @@
 ---
 
-## 🐳 Docker 一键部署说明
+## 🐳 webRTC p2p 抗审查聊天系统
 
-本项目支持使用 Docker 和 Docker Compose 一键运行，适合在 Linux、Windows（WSL）、macOS 等环境快速部署。
+本系统是一个轻量级、可一键部署的 WebRTC + TURN 点对点通信示范平台，支持 NAT 穿透失败场景 的中继通信。通过自建 coturn TURN 服务器 和 WebSocket 信令服务，实现局域网内或跨网通信。系统采用 固定用户名+密码认证，无需注册流程，适合教学演示、内网通信、IM 原型开发等。支持 Docker Compose 一键启动，包含网页 UI、信令服务器、TURN 服务，结构清晰、易于扩展，具备良好的可移植性与实际部署价值。
 
 ### 📁 项目目录结构（建议放入 GitHub 仓库）
 
@@ -21,6 +21,8 @@ webrtc-turn-chat/
 ---
 
 ### 🚀 快速部署步骤
+
+必须事先安装了docker、docker-compose
 
 ```bash
 git clone https://github.com/bifu123/webrtc-turn-chat
@@ -108,6 +110,13 @@ docker-compose down
 ```
 
 ---
+
+## 更新方法
+在项目目录下运行
+```bash
+sh ./update_and_restart.sh
+```
+如果远程git有更改，则会自动拉取，停掉当前容器，重新构建新容器并运行之。
 
 ## ✅ 推荐扩展功能
 
