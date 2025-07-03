@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>TURN 固定用户名测试</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    pre { background: #f0f0f0; padding: 10px; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h2>测试 TURN 中继（固定用户名）</h2>
+  <pre id="log">🟡 正在生成候选...</pre>
+
+  <script>
+    const log = (msg) => {
+      console.log(msg);
+      const logEl = document.getElementById("log");
+      logEl.textContent += "\n" + msg;
+      logEl.scrollTop = logEl.scrollHeight; // 自动滚动到底部
+    };
+
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        {
+          urls: "turn:192.168.66.9:3478",  // 修改为你的 TURN 服务器 IP
+          username: "webrtcuser",          // 与 turnserver.conf 中保持一致
+          credential: "123456"             // 与 turnserver.conf 中保持一致
+        }
+      ],
+      iceTransportPolicy: "relay"  // 强制只用 TURN 中继，便于测试
+    });
+
+    // 创建数据通道，才能启动 ICE 过程
+    const dc = pc.createDataChannel("test");
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        const c = event.candidate.candidate;
+        log("📡 ICE candidate: " + c);
+        if (c.includes("relay")) {
+          log("✅ 成功使用 TURN 中继！");
+        }
+      } else {
+        log("🟢 所有候选已收集完毕");
+      }
+    };
+
+    pc.createOffer()
+      .then(offer => pc.setLocalDescription(offer))
+      .catch(err => log("❌ 创建 offer 出错: " + err));
+  </script>
+</body>
+</html>

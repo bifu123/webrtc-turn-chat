@@ -1,0 +1,27 @@
+version: "3"
+
+services:
+  coturn:
+    image: instrumentisto/coturn
+    container_name: coturn
+    restart: always
+    ports:
+      - "3478:3478"
+      - "3478:3478/udp"
+    volumes:
+      - ./turnserver/turnserver.conf:/etc/coturn/turnserver.conf
+    command: ["-c", "/etc/coturn/turnserver.conf"]
+
+  signaling:
+    build: .
+    container_name: signaling
+    ports:
+      - "8765:8765"
+
+  static:
+    image: nginx:alpine
+    container_name: webui
+    volumes:
+      - .:/usr/share/nginx/html:ro
+    ports:
+      - "8000:80"

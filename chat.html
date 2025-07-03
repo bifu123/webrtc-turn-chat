@@ -1,0 +1,157 @@
+<!--chat.html-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>WebRTC聊天</title>
+</head>
+<body>
+  <h3>你的ID:</h3>
+  <input id="self-id" />
+  <h3>对方ID:</h3>
+  <input id="peer-id" />
+  <button id="register-btn">注册并连接</button>
+
+  <h3>输入消息:</h3>
+  <input id="message-input" disabled />
+  <button id="send-btn" disabled>发送</button>
+
+  <h3>日志:</h3>
+  <pre id="log"></pre>
+
+  <script>
+    const log = (msg) => {
+      document.getElementById("log").textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+    };
+
+    let signalingSocket;
+    let localConnection;
+    let dataChannel;
+
+    const config = {
+      iceServers: [
+        {
+          urls: "turn:192.168.66.9:3478",
+          username: "webrtcuser",
+          credential: "123456"
+        }
+      ],
+      iceTransportPolicy: "relay" // 强制走 TURN
+    };
+
+    document.getElementById("register-btn").onclick = () => {
+      const selfId = document.getElementById("self-id").value.trim();
+      const peerId = document.getElementById("peer-id").value.trim();
+      if (!selfId || !peerId) return alert("请填写ID");
+
+      signalingSocket = new WebSocket("ws://" + location.hostname + ":8765");
+
+      signalingSocket.onopen = () => {
+        signalingSocket.send(JSON.stringify({ type: "register", id: selfId }));
+        log("🟢 注册为: " + selfId);
+        startConnection(peerId);
+      };
+
+      signalingSocket.onmessage = async (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.type === "offer") {
+          log("📩 收到 offer");
+          await handleOffer(msg.sdp, msg.from);
+        } else if (msg.type === "answer") {
+          log("📩 收到 answer");
+          await localConnection.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+        } else if (msg.type === "ice") {
+          log("📡 收到 ICE candidate");
+          try {
+            await localConnection.addIceCandidate(msg.candidate);
+          } catch (e) {
+            log("❌ 添加 ICE 失败: " + e);
+          }
+        }
+      };
+    };
+
+    async function startConnection(peerId) {
+      localConnection = new RTCPeerConnection(config);
+
+      dataChannel = localConnection.createDataChannel("chat");
+      dataChannel.onopen = () => {
+        log("✅ 数据通道已打开");
+        enableChat();
+      };
+      dataChannel.onmessage = (e) => log("👤 对方: " + e.data);
+
+      localConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          log("📡 ICE candidate: " + event.candidate.candidate);
+          signalingSocket.send(JSON.stringify({
+            type: "ice", to: peerId, candidate: event.candidate
+          }));
+        } else {
+          log("🟢 所有候选已收集完毕");
+        }
+      };
+
+      localConnection.oniceconnectionstatechange = () => {
+        log("🔁 ICE 状态: " + localConnection.iceConnectionState);
+      };
+
+      const offer = await localConnection.createOffer();
+      await localConnection.setLocalDescription(offer);
+      signalingSocket.send(JSON.stringify({
+        type: "offer", to: peerId, sdp: localConnection.localDescription
+      }));
+    }
+
+    async function handleOffer(offer, from) {
+      localConnection = new RTCPeerConnection(config);
+
+      localConnection.ondatachannel = (e) => {
+        dataChannel = e.channel;
+        dataChannel.onopen = () => {
+          log("✅ 数据通道已打开（被动）");
+          enableChat();
+        };
+        dataChannel.onmessage = (e) => log("👤 对方: " + e.data);
+      };
+
+      localConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          log("📡 ICE candidate: " + event.candidate.candidate);
+          signalingSocket.send(JSON.stringify({
+            type: "ice", to: from, candidate: event.candidate
+          }));
+        } else {
+          log("🟢 所有候选已收集完毕");
+        }
+      };
+
+      localConnection.oniceconnectionstatechange = () => {
+        log("🔁 ICE 状态: " + localConnection.iceConnectionState);
+      };
+
+      await localConnection.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await localConnection.createAnswer();
+      await localConnection.setLocalDescription(answer);
+      signalingSocket.send(JSON.stringify({
+        type: "answer", to: from, sdp: localConnection.localDescription
+      }));
+    }
+
+    function enableChat() {
+      const input = document.getElementById("message-input");
+      const sendBtn = document.getElementById("send-btn");
+      input.disabled = false;
+      sendBtn.disabled = false;
+      sendBtn.onclick = () => {
+        const msg = input.value.trim();
+        if (msg && dataChannel.readyState === "open") {
+          dataChannel.send(msg);
+          log("🗣️ 我: " + msg);
+          input.value = "";
+        }
+      };
+    }
+  </script>
+</body>
+</html>
