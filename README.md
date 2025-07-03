@@ -112,11 +112,18 @@ docker-compose down
 ---
 
 ## 更新方法
+
 在项目目录下运行
 ```bash
 sh ./update_and_restart.sh
 ```
 如果远程git有更改，则会自动拉取，停掉当前容器，重新构建新容器并运行之。
+
+
+## 下步打算
+
+-改进onebot11标准，让web和bot得以衔接
+
 
 ## ✅ 推荐扩展功能
 
